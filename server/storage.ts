@@ -1,38 +1,35 @@
-import { type User, type InsertUser } from "@shared/schema";
-import { randomUUID } from "crypto";
-
-// modify the interface with any CRUD methods
-// you might need
+import { searches, type Search, type InsertSearch, type WeatherData } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  insertSearch(search: InsertSearch): Promise<Search>;
+  getWeather(city: string): Promise<WeatherData>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-
-  constructor() {
-    this.users = new Map();
+export class DatabaseStorage implements IStorage {
+  async insertSearch(insertSearch: InsertSearch): Promise<Search> {
+    const [search] = await db.insert(searches).values(insertSearch).returning();
+    return search;
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
-  }
+  async getWeather(city: string): Promise<WeatherData> {
+    // Mock weather data generation
+    // Simple mock logic: consistent-ish results could be better but random is fine for a demo
+    const conditions = ["Sunny", "Cloudy", "Rainy", "Snowy"] as const;
+    const condition = conditions[Math.floor(Math.random() * conditions.length)];
+    const temperature = Math.floor(Math.random() * 40) - 5; // -5 to 35
+    const humidity = Math.floor(Math.random() * 70) + 20; // 20 to 90
+    const windSpeed = Math.floor(Math.random() * 30) + 5; // 5 to 35
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+    return {
+      city,
+      temperature,
+      humidity,
+      windSpeed,
+      condition,
+    };
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
